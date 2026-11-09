@@ -1,0 +1,27 @@
+# deploy/board/counter-vision.service -> /etc/systemd/system/
+# The vision service: camera -> detector -> counting -> run permit. Assumes user 'radxa' and the
+# repo in /home/radxa/conveyor-counter; edit both if yours differ.
+#
+# Restart=always is safe: after any restart the service re-adopts an open batch as UNCERTAIN and
+# waits for an operator START. It never restarts the conveyor by itself, and while it is down
+# nothing energizes the relay.
+[Unit]
+Description=Conveyor counter - vision service (counting + run permit)
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=radxa
+WorkingDirectory=/home/radxa/conveyor-counter/services/vision
+Environment=COUNTER_SITE_CONFIG=/home/radxa/conveyor-counter/config/site.board.yaml
+Environment=PYTHONUNBUFFERED=1
+# The MVS installer sets these in /etc/profile.d, which systemd does not read
+Environment=MVCAM_COMMON_RUNENV=/opt/MVS/lib
+Environment=LD_LIBRARY_PATH=/opt/MVS/lib/aarch64
+ExecStart=/home/radxa/conveyor-counter/services/vision/.venv/bin/python -m vision.main
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

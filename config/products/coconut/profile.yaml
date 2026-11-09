@@ -1,0 +1,34 @@
+# config/products/coconut/profile.yaml
+# Everything specific to counting ONE product. To count a different product,
+# copy this folder, retrain the model and tune these values. No code changes.
+# Relative paths are resolved against the directory of THIS file.
+
+product: coconut
+
+model:
+  file: "models/best.onnx"        # FP32 ONNX (PC). The NPU build adds its own file in checkpoint 8.
+  input_width: 640
+  input_height: 640
+  class_names: ["coconut"]
+  count_class_ids: [0]            # which classes are counted
+
+detection:
+  conf_threshold: 0.25            # lowest score passed to the tracker (low scores only extend existing tracks)
+  nms_iou: 0.5
+  max_detections: 100
+
+tracking:
+  high_conf: 0.5                  # detections >= this can start new tracks
+  match_iou: 0.2                  # minimum IoU between predicted track box and detection
+  max_age_frames: 10              # frames a lost track is kept alive (coasting on its velocity)
+  min_hits: 3                     # detections before a track is "confirmed"
+  center_gate: 0.6                # also match if centres are within 0.6 x object size (0 = IoU only)
+  belt_velocity_prior: true       # new tracks start at the belt's velocity (needed below ~20 fps)
+
+counting:
+  axis: y                         # coordinate the product moves along in the image: x or y
+  line_position: 0.5              # counting line, as a fraction of the frame along that axis
+  direction: negative             # positive = moving toward increasing x/y, negative = decreasing (this belt: upward in the image)
+  hysteresis: 0.03                # dead band around the line (fraction of frame) to stop jitter double-counts
+  min_track_hits: 3               # a track must be seen this many times before it can be counted
+  roi: [0.0, 0.0, 1.0, 1.0]       # x1, y1, x2, y2 (fractions); detections outside are ignored

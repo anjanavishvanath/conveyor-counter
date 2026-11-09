@@ -1,0 +1,4 @@
+# services/vision/requirements-dev.txt
+-r requirements.txt
+pytest>=8.0
+opencv-python>=4.9       # adds cv2.imshow for the --show option of count_eval (headless build has no GUI)

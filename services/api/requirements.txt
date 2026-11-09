@@ -1,0 +1,9 @@
+# services/api/requirements.txt
+# The API imports vision.config and vision.store.db from services/vision (pure Python: these two
+# need only PyYAML + pydantic), so the API environment stays small: no OpenCV, no ONNX Runtime.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+paho-mqtt>=2.1
+pydantic>=2.5
+PyYAML>=6.0
+tzdata>=2024.1          # IANA timezone database for zoneinfo; Windows has none built in

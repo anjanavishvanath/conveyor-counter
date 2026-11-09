@@ -1,0 +1,101 @@
+# config/site.yaml
+# Plant-specific settings. Nothing about the product (model, thresholds) goes here;
+# that lives in the product profile referenced below.
+# Relative paths are resolved against the directory of THIS file.
+
+site_name: "Coconut plant - line 1"
+timezone: "Asia/Colombo"
+
+product_profile: "products/coconut/profile.yaml"
+
+crates:
+  count: 12
+  default_target: 400
+  max_target: 2000
+
+frame_source:
+  type: video_file            # video_file (PC dev) | hik_mvs (board)
+  video_file:
+    path: "../data/videos/250_coconuts.mp4"
+    realtime: true            # pace frames at the file's fps (like a live camera)
+    loop: true                # restart at the end (PC demo). false = the end of the file is a FAULT
+  hik_mvs:                    # used from checkpoint 8 (board)
+    ip: "192.168.10.20"
+    exposure_us: 2000
+    gain_db: 0.0
+    fps: 30
+
+detector:
+  # onnx_cpu  model on the CPU. A laptop CPU is too slow for real time: frames get dropped and
+  #           counts collapse (that is the point of the NPU). Use it with realtime: false.
+  # replay    DEV ONLY: replays detections saved by count_eval --save-dets, so the service, API
+  #           and UI run at the full 30 fps on any PC. Refused unless video_file + sim IO.
+  # qnn_htp   board NPU (checkpoint 8)
+  backend: replay
+  onnx_cpu:
+    threads: 4
+  replay:
+    dets_file: "../data/eval/250_dets.npz"   # must match frame_source.video_file.path
+
+io:
+  backend: sim                # sim (PC dev) | gpiod (board)
+  gpiod:
+    # !!! VERIFY on the Q6A: gpiochip device and line offsets for the 40-pin header.
+    # Get them with `gpioinfo` on the board. The values below are placeholders.
+    chip: "/dev/gpiochip4"
+    run_permit:   {line: 23, active_low: false}   # relay coil: energized = conveyor ALLOWED to run
+    alarm_light:  {line: 24, active_low: false}   # stack light: ON = conveyor stopped
+    start_button: {line: 22, active_low: true}    # NO push button, pressed = active
+    stop_button:  {line: 16, active_low: false}   # NC push button: "active" = pressed OR wire broken
+  debounce_ms: 30
+  alarm_flash_on_fault: true  # steady = normal stop, flashing = fault
+
+safety:
+  frame_timeout_ms: 1000      # no frame for this long -> FAULT (permit OFF)
+  max_frame_gap: 2            # camera frame-id jump larger than this -> lost frames -> FAULT
+  min_fps: 20.0               # sustained processing FPS below this -> FAULT. Rule: each object must be seen
+                              # in >= ~8 frames while crossing the view. 250_coconuts.mp4 test: 30 fps exact,
+                              # 15 fps -2.5 %, 10 fps fails. Recalculate for the real camera view and belt speed.
+  min_fps_window_s: 3.0
+  clear_time_s: 5.0           # after target reached: belt considered clear after this long with no new counts
+  heartbeat_period_ms: 250    # external watchdog heartbeat (checkpoint 10)
+  fault_on_db_error: true     # counts not being persisted = silent miscount risk -> stop
+  fault_on_bus_loss: false    # broker down only blinds the UI; counting and the interlock continue.
+                              # Set true if the plant wants the conveyor stopped whenever the
+                              # supervisor cannot see the live count.
+  bus_grace_s: 10.0           # allow this long for an MQTT reconnect before reacting
+
+storage:
+  db_path: "../data/counter.db"
+  synchronous: FULL           # fsync every commit: a power loss costs at most the writer queue
+
+mqtt:
+  host: "localhost"
+  port: 1883
+  base_topic: "counter"
+  keepalive_s: 15
+
+reporting:
+  # A production day runs from this local time to the same time next day, so a shift
+  # that crosses midnight is reported as one day. Set it to the shift start time.
+  day_start: "00:00"
+
+api:
+  # Backend for the kiosk UI (services/api). Paths are relative to this file.
+  host: "127.0.0.1"
+  port: 8000
+  settings_db: "../data/api.db"
+  export_dir: "../data/exports"        # CSV export target when no USB stick is mounted (PC)
+  usb_mount_roots: ["/media", "/run/media"]
+  ui_dist: "../services/ui/dist"
+  allow_system_control: false          # true on the board, with a sudoers rule for the commands
+
+preview:
+  # Annotated MJPEG stream served by the vision service (commissioning and count disputes).
+  # Keep it on 127.0.0.1 unless the UI runs on another machine.
+  enabled: true
+  host: "127.0.0.1"
+  port: 8081
+  fps: 5.0
+  jpeg_quality: 70
+  max_width: 960

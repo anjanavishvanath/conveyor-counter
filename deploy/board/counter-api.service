@@ -1,0 +1,20 @@
+# deploy/board/counter-api.service -> /etc/systemd/system/
+# API + built kiosk UI on port 8000. Not on the control path: if it stops, counting and the
+# run permit carry on. Assumes user 'radxa' and /home/radxa/conveyor-counter.
+[Unit]
+Description=Conveyor counter - API and kiosk UI
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=radxa
+WorkingDirectory=/home/radxa/conveyor-counter/services/api
+Environment=COUNTER_SITE_CONFIG=/home/radxa/conveyor-counter/config/site.board.yaml
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/radxa/conveyor-counter/services/api/.venv/bin/python -m api.main
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

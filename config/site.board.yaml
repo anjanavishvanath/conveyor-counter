@@ -1,0 +1,95 @@
+# config/site.board.yaml
+# Board configuration: Radxa Dragon Q6A + Hikrobot MV-CS016-10GC.
+# Selected with   export COUNTER_SITE_CONFIG=config/site.board.yaml   (the systemd units set it).
+# config/site.yaml stays the PC development config (video file + replay).
+# Relative paths are resolved against the directory of THIS file.
+#
+# STAGE: camera bring-up (checkpoint 8). Detector on the CPU, IO simulated (no relay wired).
+# Items marked BENCH must be revisited before the relay is wired (checkpoint 10).
+
+site_name: "Coconut plant - line 1"
+timezone: "Asia/Colombo"
+
+product_profile: "products/coconut/profile.yaml"
+
+crates:
+  count: 12
+  default_target: 400
+  max_target: 2000
+
+frame_source:
+  type: hik_mvs
+  hik_mvs:
+    ip: "192.168.0.64"          # camera static IP set during bring-up (SETUP.md). Final subnet still open.
+    pixel_format: BayerRG8      # 1440x1080x30 fps: 47 MB/s. RGB8 would need 140 MB/s, more than GigE carries
+    exposure_us: 10000          # BENCH: bring-up value for room light. Moving coconuts need a short exposure
+                                # (derive the max from belt speed and mm/px) with enclosure lighting
+    gain_db: 0.0
+    fps: 30
+    packet_size: 0              # 0 = SDK optimal. Set 1500 if jumbo frames are not enabled on enp1s0
+    buffer_frames: 3
+    # Location of the SDK's Python binding and library. UNVERIFIED: check with
+    #   find /opt/MVS -name MvCameraControl_class.py ; find /opt/MVS -name libMvCameraControl.so
+    sdk_python_path: "/opt/MVS/Samples/aarch64/Python/MvImport"
+    sdk_lib: "/opt/MVS/lib/aarch64/libMvCameraControl.so"
+
+detector:
+  backend: onnx_cpu             # board CPU until the NPU backend (qnn_htp) exists. Expect a few fps only
+  onnx_cpu:
+    threads: 4
+
+io:
+  backend: sim                  # no relay yet. gpiod + pin map at checkpoint 10 (tools/board/gpio_check.py)
+  gpiod:
+    # !!! VERIFY on the Q6A with `gpioinfo`: placeholders.
+    chip: "/dev/gpiochip4"
+    run_permit:   {line: 23, active_low: false}
+    alarm_light:  {line: 24, active_low: false}
+    start_button: {line: 22, active_low: true}
+    stop_button:  {line: 16, active_low: false}
+  debounce_ms: 30
+  alarm_flash_on_fault: true
+
+safety:
+  frame_timeout_ms: 1000
+  max_frame_gap: 2
+  # BENCH: the CPU detector manages only a few fps, so a batch started on the bench would fault
+  # with low_fps after 3 s. 3 lets you run a test batch with simulated IO. The config loader
+  # refuses a value below 10 once io.backend is gpiod. Production: 20 or derived from belt speed.
+  min_fps: 3.0
+  min_fps_window_s: 3.0
+  clear_time_s: 5.0
+  heartbeat_period_ms: 250
+  fault_on_db_error: true
+  fault_on_bus_loss: false
+  bus_grace_s: 10.0
+
+storage:
+  db_path: "../data/counter.db"
+  synchronous: FULL
+
+mqtt:
+  host: "localhost"
+  port: 1883
+  base_topic: "counter"
+  keepalive_s: 15
+
+reporting:
+  day_start: "00:00"
+
+api:
+  host: "0.0.0.0"               # BENCH: reachable from your laptop on the LAN. Kiosk only: 127.0.0.1
+  port: 8000
+  settings_db: "../data/api.db"
+  export_dir: "../data/exports"
+  usb_mount_roots: ["/media", "/run/media"]
+  ui_dist: "../services/ui/dist"
+  allow_system_control: false   # true once the sudoers rule in docs/board-setup.md is installed
+
+preview:
+  enabled: true
+  host: "0.0.0.0"               # BENCH: so the camera view loads in a browser on your laptop
+  port: 8081
+  fps: 5.0
+  jpeg_quality: 70
+  max_width: 960

@@ -1,0 +1,10 @@
+# Store text with LF line endings and check it out with LF everywhere, so shell scripts, systemd
+# units and YAML written on Windows work unchanged on the board.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.onnx binary
+*.npz binary
+*.mp4 binary

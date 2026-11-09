@@ -1,0 +1,41 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# ── Node / UI build (built on each machine: cd services/ui && npm ci && npm run build) ──
+node_modules/
+services/ui/dist/
+
+# ── Runtime data: databases, CSV exports, videos, evaluation output. Stays on each machine. ──
+data/*
+!data/.gitkeep
+
+# ── Models: large binaries, copied to each machine separately (docs/board-setup.md) ──
+config/products/*/models/*
+!config/products/*/models/.gitkeep
+*.onnx
+*.pt
+*.bin
+*.dlc
+*.npz
+
+# ── Media ──
+*.mp4
+*.avi
+*.mkv
+
+# ── Logs, local settings, secrets ──
+*.log
+.env
+.env.*
+
+# ── Editors / OS ──
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

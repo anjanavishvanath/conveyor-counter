@@ -1,0 +1,19 @@
+# docker-compose.dev.yml
+# PC development: just the broker. The vision service and the API run from the venv so they
+# can be restarted and debugged quickly. The full containerised stack is checkpoint 7.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   cd services/vision && python -m vision.main
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: counter-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./services/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+
+volumes:
+  mosquitto-data:

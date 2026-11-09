@@ -1,0 +1,9 @@
+# services/vision/requirements.txt
+numpy>=1.26
+opencv-python-headless>=4.9
+onnxruntime>=1.18        # PC / CPU detector (checkpoint 2). The board NPU backend is added in checkpoint 8.
+scipy>=1.11              # Hungarian assignment in the tracker
+pydantic>=2.5
+PyYAML>=6.0
+paho-mqtt>=2.1          # local message bus to the API/UI (checkpoint 4)
+tzdata>=2024.1          # IANA timezone database for zoneinfo; Windows has none built in (site.yaml timezone)
